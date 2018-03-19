@@ -54,6 +54,11 @@ typeset -g HISTORY_SUBSTRING_SEARCH_FUZZY=''
 #-----------------------------------------------------------------------------
 
 typeset -g BUFFER MATCH MBEGIN MEND CURSOR
+typeset -g HISTORY_SUBSTRING_SEARCH_HIGHLIGHT_FOUND
+typeset -g HISTORY_SUBSTRING_SEARCH_HIGHLIGHT_NOT_FOUND
+typeset -g HISTORY_SUBSTRING_SEARCH_GLOBBING_FLAGS
+typeset -g HISTORY_SUBSTRING_SEARCH_ENSURE_UNIQUE
+typeset -g HISTORY_SUBSTRING_SEARCH_PRESERVE_CURSOR_POSITION
 typeset -g _history_substring_search_refresh_display
 typeset -g _history_substring_search_query_highlight
 typeset -g _history_substring_search_result
@@ -64,6 +69,19 @@ typeset -g -i _history_substring_search_raw_match_index
 typeset -g -a _history_substring_search_matches
 typeset -g -i _history_substring_search_match_index
 typeset -g -A _history_substring_search_unique_filter
+typeset -g _history_substring_search_match_index
+
+#-----------------------------------------------------------------------------
+# configuration variables
+#-----------------------------------------------------------------------------
+
+typeset -g HISTORY_SUBSTRING_SEARCH_HIGHLIGHT_FOUND='bg=magenta,fg=white,bold'
+typeset -g HISTORY_SUBSTRING_SEARCH_HIGHLIGHT_NOT_FOUND='bg=red,fg=white,bold'
+typeset -g HISTORY_SUBSTRING_SEARCH_GLOBBING_FLAGS='i'
+typeset -g HISTORY_SUBSTRING_SEARCH_ENSURE_UNIQUE=''
+typeset -g HISTORY_SUBSTRING_SEARCH_PRESERVE_CURSOR_POSITION=''
+typeset -g _history_substring_search_{refresh_display,query_highlight,result,query,match_index,raw_match_index}
+typeset -ga _history_substring_search{,_raw}_matches
 
 #-----------------------------------------------------------------------------
 # the main ZLE widgets
@@ -295,7 +313,7 @@ _history-substring-search-begin() {
   # decremented to 0.
   #
   if [[ $WIDGET == history-substring-search-down ]]; then
-     _history_substring_search_match_index=1
+    _history_substring_search_match_index=1
   else
     _history_substring_search_match_index=0
   fi
@@ -306,11 +324,17 @@ _history-substring-search-end() {
 
   _history_substring_search_result=$BUFFER
 
-  # the search was successful so display the result properly by clearing away
-  # existing highlights and moving the cursor to the end of the result buffer
+  # the search was successful so display the result properly by clearing away existing highlights
   if [[ $_history_substring_search_refresh_display -eq 1 ]]; then
     region_highlight=()
-    CURSOR=${#BUFFER}
+
+    #
+    # If HISTORY_SUBSTRING_SEARCH_PRESERVE_CURSOR_POSITION is not empty
+    # move the cursor to the end of the result buffer.
+    #
+    if [[ -z $HISTORY_SUBSTRING_SEARCH_PRESERVE_CURSOR_POSITION ]]; then
+      CURSOR=${#BUFFER}
+    fi
   fi
 
   # highlight command line using zsh-syntax-highlighting
